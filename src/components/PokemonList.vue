@@ -1,6 +1,6 @@
 <template>
   <div class="pokedex-wrapper">
-    <!-- Titre + barre de recherche -->
+    <!-- Titre + recherche -->
     <div class="flex justify-between items-center mb-6 px-4 flex-wrap gap-4">
       <h1 class="text-4xl font-bold text-orange-600 drop-shadow-lg">POKÉDEX</h1>
       <input
@@ -11,7 +11,7 @@
       />
     </div>
 
-    <!-- Bouton + Select tri -->
+    <!-- Boutons chargement / tri + bouton pokedex -->
     <div class="flex justify-center items-center gap-4 mb-4 flex-wrap">
       <button
         class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300"
@@ -31,9 +31,17 @@
           <option value="desc">Z → A</option>
         </select>
       </div>
+
+      <!-- Bouton ouvrir pokedex -->
+      <button
+        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-full shadow-md transition"
+        @click="pokedexModalOpen = true"
+      >
+        Voir mon Pokédex ({{ pokedex.length }})
+      </button>
     </div>
 
-    <!-- Barre de filtres types -->
+    <!-- Filtres par type -->
     <div class="flex flex-wrap justify-center gap-2 mb-8 px-4">
       <button
         v-for="type in typeOptions"
@@ -48,13 +56,13 @@
       </button>
     </div>
 
-    <!-- Cartes de Pokémons -->
+    <!-- Cartes de pokémons -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
       <div
         v-for="pokemon in filteredPokemons"
         :key="pokemon.name"
-        class="pokemon-card cursor-pointer"
-        @click="selectedPokemon = pokemon"
+        class="pokemon-card cursor-pointer relative group"
+        @click.self="selectedPokemon = pokemon"
       >
         <h2>{{ pokemon.name }}</h2>
         <img :src="pokemon.image" alt="pokemon" />
@@ -64,25 +72,42 @@
             {{ ability.ability.name }}
           </li>
         </ul>
+
+        <!-- Bouton + -->
+        <button
+          class="absolute top-2 right-2 bg-white text-orange-600 text-xl font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-orange-100 z-10"
+          @click.stop="addToPokedex(pokemon)"
+        >
+          +
+        </button>
       </div>
     </div>
 
-    <!-- Modale Pokémon -->
+    <!-- Modale détails -->
     <PokemonModal
       v-if="selectedPokemon"
       :pokemon="selectedPokemon"
       @close="selectedPokemon = null"
+    />
+
+    <!-- Modale Pokédex -->
+    <PokedexModal
+      v-if="pokedexModalOpen"
+      :pokedex="pokedex"
+      @close="pokedexModalOpen = false"
     />
   </div>
 </template>
 
 <script>
 import PokemonModal from './PokemonModal.vue'
+import PokedexModal from './PokedexModal.vue'
 
 export default {
   name: 'PokemonList',
   components: {
-    PokemonModal
+    PokemonModal,
+    PokedexModal
   },
   data() {
     return {
@@ -93,6 +118,8 @@ export default {
       selectedType: '',
       searchQuery: '',
       selectedPokemon: null,
+      pokedexModalOpen: false,
+      pokedex: [],
       typeOptions: [
         'all', 'normal', 'fire', 'water', 'grass', 'electric',
         'ice', 'fighting', 'poison', 'ground', 'flying',
@@ -108,12 +135,12 @@ export default {
     filteredPokemons() {
       const typeFiltered = this.selectedType === '' || this.selectedType === 'all'
         ? this.pokemons
-        : this.pokemons.filter(pokemon =>
-            pokemon.types.some(t => t.type.name === this.selectedType)
+        : this.pokemons.filter(p =>
+            p.types.some(t => t.type.name === this.selectedType)
           )
 
-      return typeFiltered.filter(pokemon =>
-        this.normalize(pokemon.name).includes(this.normalize(this.searchQuery))
+      return typeFiltered.filter(p =>
+        this.normalize(p.name).includes(this.normalize(this.searchQuery))
       )
     }
   },
@@ -156,6 +183,12 @@ export default {
     },
     normalize(str) {
       return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    },
+    addToPokedex(pokemon) {
+      const alreadyExists = this.pokedex.some(p => p.name === pokemon.name)
+      if (!alreadyExists) {
+        this.pokedex.push(pokemon)
+      }
     }
   }
 }
@@ -167,7 +200,6 @@ export default {
   padding: 20px;
   background: linear-gradient(to bottom, #fffbe6, #ffe5b4);
   min-height: 100vh;
-  border: 5px dashed rgb(255, 102, 0);
 }
 
 .pokemon-card {
@@ -180,6 +212,7 @@ export default {
   max-width: 240px;
   box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
 }
 
 .pokemon-card:hover {
