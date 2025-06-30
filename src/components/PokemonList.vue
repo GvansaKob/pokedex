@@ -1,6 +1,6 @@
 <template>
   <div class="pokedex-wrapper">
-    <!-- Titre + recherche -->
+    <!-- Titre + barre de recherche -->
     <div class="flex justify-between items-center mb-6 px-4 flex-wrap gap-4">
       <h1 class="text-4xl font-bold text-orange-600 drop-shadow-lg">POKÉDEX</h1>
       <input
@@ -11,44 +11,45 @@
       />
     </div>
 
-    <!-- Boutons chargement / tri + bouton pokedex -->
-    <div class="flex justify-center items-center gap-4 mb-4 flex-wrap">
-      <button
-        class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300"
-        @click="loadMore"
-      >
-        Charger plus de Pokémons
-      </button>
-
-      <div class="flex items-center gap-2">
-        <label class="font-semibold text-orange-700">Trier :</label>
-        <select
-          v-model="sortOrder"
-          @change="sortPokemons"
-          class="border rounded px-3 py-1 shadow focus:outline-none"
+    <!-- Boutons du haut -->
+    <div class="flex justify-between items-center mb-4 px-4 flex-wrap gap-4">
+      <!-- Bouton Charger -->
+      <div class="flex gap-4 items-center">
+        <button
+          class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition"
+          @click="loadMore"
         >
-          <option value="asc">A → Z</option>
-          <option value="desc">Z → A</option>
-        </select>
+          Charger plus de Pokémons
+        </button>
+
+        <!-- Tri -->
+        <div class="flex items-center gap-2">
+          <label class="font-semibold text-orange-700">Trier :</label>
+          <select v-model="sortOrder" @change="sortPokemons" class="border rounded px-3 py-1 shadow">
+            <option value="asc">A → Z</option>
+            <option value="desc">Z → A</option>
+          </select>
+        </div>
       </div>
 
-      <!-- Bouton ouvrir pokedex -->
+      <!-- Bouton Pokédex -->
       <button
-        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-full shadow-md transition"
-        @click="pokedexModalOpen = true"
+        class="bg-yellow-400 hover:bg-yellow-500 text-orange-900 font-bold py-2 px-4 rounded-full shadow transition"
+        @click="showPokedex = true"
+        title="Voir le Pokédex"
       >
-        Voir mon Pokédex ({{ pokedex.length }})
+        📘 Mon Pokédex ({{ pokedex.length }})
       </button>
     </div>
 
-    <!-- Filtres par type -->
+    <!-- Filtres Types -->
     <div class="flex flex-wrap justify-center gap-2 mb-8 px-4">
       <button
         v-for="type in typeOptions"
         :key="type"
         @click="selectedType = type"
         :class="[
-          'px-4 py-2 rounded-lg text-white font-semibold transition duration-200',
+          'px-4 py-2 rounded-lg text-white font-semibold transition',
           selectedType === type ? 'bg-orange-600' : 'bg-orange-200 hover:bg-orange-400'
         ]"
       >
@@ -56,13 +57,13 @@
       </button>
     </div>
 
-    <!-- Cartes de pokémons -->
+    <!-- Cartes Pokémons -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
       <div
         v-for="pokemon in filteredPokemons"
         :key="pokemon.name"
-        class="pokemon-card cursor-pointer relative group"
-        @click.self="selectedPokemon = pokemon"
+        class="pokemon-card relative"
+        @click="selectedPokemon = pokemon"
       >
         <h2>{{ pokemon.name }}</h2>
         <img :src="pokemon.image" alt="pokemon" />
@@ -75,7 +76,7 @@
 
         <!-- Bouton + -->
         <button
-          class="absolute top-2 right-2 bg-white text-orange-600 text-xl font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:bg-orange-100 z-10"
+          class="absolute top-2 right-2 bg-white text-orange-600 rounded-full px-2 py-1 font-bold text-xl shadow hover:bg-orange-100"
           @click.stop="addToPokedex(pokemon)"
         >
           +
@@ -83,18 +84,17 @@
       </div>
     </div>
 
-    <!-- Modale détails -->
+    <!-- Modales -->
     <PokemonModal
       v-if="selectedPokemon"
       :pokemon="selectedPokemon"
       @close="selectedPokemon = null"
     />
-
-    <!-- Modale Pokédex -->
     <PokedexModal
-      v-if="pokedexModalOpen"
+      v-if="showPokedex"
       :pokedex="pokedex"
-      @close="pokedexModalOpen = false"
+      @close="showPokedex = false"
+      @remove="removeFromPokedex"
     />
   </div>
 </template>
@@ -105,21 +105,18 @@ import PokedexModal from './PokedexModal.vue'
 
 export default {
   name: 'PokemonList',
-  components: {
-    PokemonModal,
-    PokedexModal
-  },
+  components: { PokemonModal, PokedexModal },
   data() {
     return {
       pokemons: [],
+      pokedex: [],
       limit: 16,
       offset: 0,
       sortOrder: 'asc',
       selectedType: '',
       searchQuery: '',
       selectedPokemon: null,
-      pokedexModalOpen: false,
-      pokedex: [],
+      showPokedex: false,
       typeOptions: [
         'all', 'normal', 'fire', 'water', 'grass', 'electric',
         'ice', 'fighting', 'poison', 'ground', 'flying',
@@ -133,13 +130,13 @@ export default {
   },
   computed: {
     filteredPokemons() {
-      const typeFiltered = this.selectedType === '' || this.selectedType === 'all'
+      const filtered = this.selectedType === '' || this.selectedType === 'all'
         ? this.pokemons
         : this.pokemons.filter(p =>
             p.types.some(t => t.type.name === this.selectedType)
           )
 
-      return typeFiltered.filter(p =>
+      return filtered.filter(p =>
         this.normalize(p.name).includes(this.normalize(this.searchQuery))
       )
     }
@@ -165,7 +162,7 @@ export default {
         this.pokemons.push(...newPokemons)
         this.sortPokemons()
       } catch (error) {
-        console.error('Erreur lors du chargement des pokémons :', error)
+        console.error('Erreur chargement pokémons:', error)
       }
     },
     loadMore() {
@@ -185,10 +182,12 @@ export default {
       return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     },
     addToPokedex(pokemon) {
-      const alreadyExists = this.pokedex.some(p => p.name === pokemon.name)
-      if (!alreadyExists) {
+      if (!this.pokedex.find(p => p.name === pokemon.name)) {
         this.pokedex.push(pokemon)
       }
+    },
+    removeFromPokedex(pokemonName) {
+      this.pokedex = this.pokedex.filter(p => p.name !== pokemonName)
     }
   }
 }
@@ -200,6 +199,7 @@ export default {
   padding: 20px;
   background: linear-gradient(to bottom, #fffbe6, #ffe5b4);
   min-height: 100vh;
+  border: 5px dashed rgb(255, 102, 0);
 }
 
 .pokemon-card {
@@ -212,7 +212,7 @@ export default {
   max-width: 240px;
   box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  position: relative;
+  cursor: pointer;
 }
 
 .pokemon-card:hover {
